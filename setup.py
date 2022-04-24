@@ -32,6 +32,7 @@ setup(
         "matplotlib",
         "networkx>=1.10",
         "deprecation",
+        "pydantic",
     ],
     extras_require={
         "dev": ["pytest", "pypower", "pandapower", "scikit-learn"],

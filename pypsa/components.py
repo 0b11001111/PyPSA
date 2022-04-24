@@ -710,8 +710,10 @@ class Network(Basic):
             One of "optimal", "suboptimal" (in which case a solution is still
             provided), "infeasible", "infeasible or unbounded", or "other".
         """
+        # import locally to avoid circular dependency conflicts
+        from .lopf import LinearOptimalPowerFlowNative, LinearOptimalPowerFlowPyomo
+
         args = {
-            "snapshots": snapshots,
             "keep_files": keep_files,
             "solver_options": solver_options,
             "formulation": formulation,
@@ -721,6 +723,7 @@ class Network(Basic):
             "solver_logfile": solver_logfile,
         }
         args.update(kwargs)
+        args = {k: v for k, v in args.items() if v is not None}
 
         if not self.shunt_impedances.empty:
             logger.warning(
@@ -729,10 +732,10 @@ class Network(Basic):
                 "power flow (LOPF)."
             )
 
-        if pyomo:
-            return network_lopf(self, **args)
-        else:
-            return network_lopf_lowmem(self, **args)
+        lopf_cls = LinearOptimalPowerFlowPyomo if pyomo else LinearOptimalPowerFlowNative
+        lopf = lopf_cls(**args)
+
+        return lopf.solve(network=self, snapshots=snapshots).legacy_result
 
     def add(self, class_name, name, **kwargs):
         """
