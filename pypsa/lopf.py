@@ -131,6 +131,7 @@ class _LinearOptimalPowerFlow(BaseModel, metaclass=ABCMeta):
                     "(e.g. {'threads':2} tells gurobi to use only 2 cpus)"
     )
     solver_logfile: Optional[Path] = Field(
+        default=None,
         description="If not None, sets the logfile option of the solver"
     )
     keep_files: bool = Field(
@@ -143,6 +144,7 @@ class _LinearOptimalPowerFlow(BaseModel, metaclass=ABCMeta):
         description="Formulation of the linear power flow equations to use"
     )
     extra_functionality: Optional[ExtraFunctionality] = Field(
+        default=None,
         description="This function must take two arguments "
                     "`extra_functionality(network, snapshots)` and is called "
                     "after the model building is complete, but before it is "
@@ -220,6 +222,7 @@ class LinearOptimalPowerFlowNative(_LinearOptimalPowerFlow):
                     "custom objective has to be defined via extra_functionality."
     )
     warmstart: Optional[Path] = Field(
+        default=None,
         description="Use this to warmstart the optimization. Pass a string "
                     "which gives the path to the basis file. If set to True, a "
                     "path to a basis file must be given in network.basis_fn."
@@ -245,6 +248,7 @@ class LinearOptimalPowerFlowNative(_LinearOptimalPowerFlow):
                     "and `n.cons` after solving."
     )
     solver_dir: Optional[Path] = Field(
+        default=None,
         description="Path to directory where necessary files are written, "
                     "default None leads to the default temporary directory "
                     "used by `tempfile.mkstemp()`."
@@ -272,10 +276,12 @@ class LinearOptimalPowerFlowPyomo(_LinearOptimalPowerFlow):
                     "been extracted."
     )
     solver_io: Optional[str] = Field(
+        default=None,
         description="Solver Input-Output option, e.g. 'python' to use "
                     "'gurobipy' for solver_backend='gurobi'"
     )
     extra_postprocessing: Optional[PostProcessor] = Field(
+        default=None,
         description="This function must take three arguments "
                     "`extra_postprocessing(network,snapshots,duals)` and is "
                     "called after the model has solved and the results are "
@@ -300,3 +306,6 @@ class LinearOptimalPowerFlowPyomo(_LinearOptimalPowerFlow):
     @staticmethod
     def legacy_result_parser() -> Callable:
         return Result.from_pyomo
+
+
+LinearOptimalPowerFlow = LinearOptimalPowerFlowPyomo
