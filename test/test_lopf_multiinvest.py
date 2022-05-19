@@ -395,7 +395,7 @@ def test_global_constraint_primary_energy(n_sts):
 
     status, cond = n_sts.lopf(pyomo=False, multi_investment_periods=True)
 
-    active = get_activity_mask(n_sts, c)
+    active = get_activity_mask(n_sts, c, multi_invest=True)
     soc_end = n_sts.pnl(c).e.where(active).ffill().iloc[-1]
     soc_diff = n_sts.df(c).e_initial - soc_end
     emissions = n_sts.df(c).carrier.map(n_sts.carriers.co2_emissions)

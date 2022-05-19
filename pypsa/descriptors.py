@@ -382,7 +382,7 @@ def get_active_assets(n, c, investment_period):
     return n.df(c).eval("build_year <= @investment_period < build_year + lifetime")
 
 
-def get_activity_mask(n, c, sns=None):
+def get_activity_mask(n, c, sns=None, multi_invest=False):
     """
     Getter function.
 
@@ -394,7 +394,7 @@ def get_activity_mask(n, c, sns=None):
     """
     if sns is None:
         sns = n.snapshots
-    if getattr(n, "_multi_invest", False):
+    if getattr(n, "_multi_invest", multi_invest):
         _ = {period: get_active_assets(n, c, period) for period in n.investment_periods}
         return pd.concat(_, axis=1).T.reindex(n.snapshots, level=0).loc[sns]
     else:
