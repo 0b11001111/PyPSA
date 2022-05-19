@@ -710,10 +710,13 @@ class Network(Basic):
             One of "optimal", "suboptimal" (in which case a solution is still
             provided), "infeasible", "infeasible or unbounded", or "other".
         """
-        # import locally to avoid circular dependency conflicts
-        from .lopf import LinearOptimalPowerFlowNative, LinearOptimalPowerFlowPyomo
+        # Importing those classes globally would lead in a circular dependency error
+        from pypsa.linear_program.drivers import Driver
+        from pypsa.optimal_power_flow.linear import LinearOptimalPowerFlow
+        from pypsa.optimal_power_flow.linear.migration_util import NetworkProxyPypsa
 
-        args = {
+        # Build parameters
+        parameters = {
             "keep_files": keep_files,
             "solver_options": solver_options,
             "formulation": formulation,
@@ -722,20 +725,31 @@ class Network(Basic):
             "solver_name": solver_name,
             "solver_logfile": solver_logfile,
         }
-        args.update(kwargs)
-        args = {k: v for k, v in args.items() if v is not None}
+        parameters.update(kwargs)
+        parameters["network"] = self
+        parameters["snapshots"] = self.snapshots if snapshots is None else snapshots
+        parameters = {k: v for k, v in parameters.items() if v is not None}
 
-        if not self.shunt_impedances.empty:
-            logger.warning(
-                "You have defined one or more shunt impedances. "
-                "Shunt impedances are ignored by the linear optimal "
-                "power flow (LOPF)."
-            )
+        # TODO remove once pyomo driver is implemented
+        if pyomo:
+            return network_lopf(**parameters)
 
-        lopf_cls = LinearOptimalPowerFlowPyomo if pyomo else LinearOptimalPowerFlowNative
-        lopf = lopf_cls(**args)
+        if parameters.pop("warmstart", False):
+            parameters["basis_fn"] = getattr(self, "basis_fn", None)
 
-        return lopf.solve(network=self, snapshots=snapshots).legacy_result
+        lopf = LinearOptimalPowerFlow(**parameters)
+        driver = Driver.pyomo if pyomo else Driver.pypsa
+        solver = driver.new_solver(**parameters)
+        with solver.new_linear_program() as lp:
+            lopf.build_problem(lp)
+            if extra_functionality:
+                proxy = NetworkProxyPypsa(self, lp, multi_invest=multi_investment_periods)
+                extra_functionality(proxy, snapshots)
+            result = solver.solve(lp)
+            if result.solution:
+                lopf.assign_solution(lp, result)
+
+        return result.status.legacy_status
 
     def add(self, class_name, name, **kwargs):
         """
